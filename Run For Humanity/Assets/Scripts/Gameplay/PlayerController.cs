@@ -312,8 +312,8 @@ namespace RunForHumanity.Gameplay
                 EndSlide();
             }
             
-            // Permitir saltar en el aire para cambios de estado rápidos
-            if (isGrounded || !isGrounded)
+            // Saltos normales: solo si está en el suelo
+            if (isGrounded)
             {
                 verticalVelocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
                 EventManager.TriggerPlayerJump();
