@@ -1,0 +1,9 @@
+Credits:
+
+Model and textures extracted/ripped by GhostieSFM
+
+Model ripping script by : AdventureT
+
+Texture ripping script by: Random Talking Bush
+
+[RTB's note: I've supplied rigged models for Fake Crash here since my model script was released after this was uploaded originally.]
