@@ -75,16 +75,29 @@ namespace RunForHumanity.Gameplay
             // Punto donde la cámara debe mirar
             Vector3 lookAtPosition = target.position + lookAtOffset;
             
-            // Calcular rotación deseada
-            Quaternion desiredRotation = Quaternion.LookRotation(lookAtPosition - transform.position);
+            // Calcular rotación deseada (con validación)
+            Vector3 lookDirection = lookAtPosition - transform.position;
+            Quaternion desiredRotation;
+            
+            if (lookDirection.sqrMagnitude > 0.001f) // Validar que no es cero
+            {
+                desiredRotation = Quaternion.LookRotation(lookDirection);
+            }
+            else
+            {
+                desiredRotation = transform.rotation; // Mantener rotación actual si la dirección es inválida
+            }
             
             // Detectar movimiento lateral para inclinar la cámara (Subway Surfers style)
-            float lateralMovement = (target.position.x - lastTargetPosition.x) / Time.deltaTime;
+            float lateralMovement = Time.deltaTime > 0 ? (target.position.x - lastTargetPosition.x) / Time.deltaTime : 0f;
             float targetTilt = Mathf.Clamp(lateralMovement * -maxTiltAngle, -maxTiltAngle, maxTiltAngle);
             currentTilt = Mathf.Lerp(currentTilt, targetTilt, tiltSpeed * Time.deltaTime);
             
-            // Aplicar inclinación a la rotación
-            desiredRotation *= Quaternion.Euler(0, 0, currentTilt);
+            // Aplicar inclinación a la rotación (con validación)
+            if (!float.IsNaN(currentTilt) && !float.IsInfinity(currentTilt))
+            {
+                desiredRotation *= Quaternion.Euler(0, 0, currentTilt);
+            }
             
             // Aplicar smooth rotation
             transform.rotation = Quaternion.Slerp(

@@ -1,4 +1,5 @@
 using UnityEngine;
+using RunForHumanity.Core;
 
 namespace RunForHumanity.Gameplay
 {
@@ -61,7 +62,8 @@ namespace RunForHumanity.Gameplay
             // Reproducir sonido si hay clip asignado
             if (collectSound != null)
             {
-                AudioSource.PlayClipAtPoint(collectSound, transform.position);
+                float sfxVolume = GameSettingsManager.Instance.GetNormalizedSFXVolume();
+                AudioSource.PlayClipAtPoint(collectSound, transform.position, sfxVolume);
             }
             
             // Destruir el power-up

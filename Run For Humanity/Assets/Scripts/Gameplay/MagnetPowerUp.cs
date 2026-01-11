@@ -1,10 +1,8 @@
 using UnityEngine;
+using RunForHumanity.Core;
 
 namespace RunForHumanity.Gameplay
 {
-    /// <summary>
-    /// Power-up que atrae automáticamente las monedas al jugador
-    /// </summary>
     [RequireComponent(typeof(Collider))]
     public class MagnetPowerUp : MonoBehaviour
     {
@@ -19,20 +17,17 @@ namespace RunForHumanity.Gameplay
 
         private void Start()
         {
-            // Asegurar que el collider sea trigger
             Collider col = GetComponent<Collider>();
             col.isTrigger = true;
         }
 
         private void Update()
         {
-            // Rotación visual
             transform.Rotate(Vector3.up, rotationSpeed * Time.deltaTime);
         }
 
         private void OnTriggerEnter(Collider other)
         {
-            // Verificar si es el jugador
             if (other.CompareTag("Player"))
             {
                 CollectPowerUp(other.gameObject);
@@ -43,15 +38,12 @@ namespace RunForHumanity.Gameplay
         {
             Debug.Log($"[MagnetPowerUp] ¡Power-up recogido! Imán activo por {duration}s (rango: {magnetRange})");
             
-            // Obtener PlayerController
             PlayerController playerController = player.GetComponent<PlayerController>();
             if (playerController != null)
             {
-                // Aplicar efecto de imán
                 playerController.ApplyMagnet(duration, magnetRange);
             }
             
-            // Crear partículas si hay prefab asignado
             if (collectParticlePrefab != null)
             {
                 GameObject particles = Instantiate(collectParticlePrefab, transform.position, Quaternion.identity);
@@ -61,7 +53,8 @@ namespace RunForHumanity.Gameplay
             // Reproducir sonido si hay clip asignado
             if (collectSound != null)
             {
-                AudioSource.PlayClipAtPoint(collectSound, transform.position);
+                float sfxVolume = GameSettingsManager.Instance.GetNormalizedSFXVolume();
+                AudioSource.PlayClipAtPoint(collectSound, transform.position, sfxVolume);
             }
             
             // Destruir el power-up

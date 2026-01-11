@@ -5,10 +5,6 @@ using RunForHumanity.Gameplay;
 
 namespace RunForHumanity.Systems
 {
-    /// <summary>
-    /// Unified input manager supporting touch, keyboard, and sensors
-    /// SOLID: Single Responsibility - Handles all input
-    /// </summary>
     public class InputManager : MonoBehaviour, IInitializable
     {
         [Header("Input Settings")]
@@ -37,7 +33,6 @@ namespace RunForHumanity.Systems
         
         public void Initialize()
         {
-            // Get sensor manager if available
             if (_enableSensorInput)
             {
                 _sensorManager = ServiceLocator.GetService<SensorManager>();
@@ -56,7 +51,6 @@ namespace RunForHumanity.Systems
         
         private void Update()
         {
-            // Solo procesar input en escena Gameplay
             string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             if (sceneName != "Gameplay") return;
             
@@ -107,7 +101,6 @@ namespace RunForHumanity.Systems
                         
                         if (!_isSwiping && touchDuration < _tapTimeThreshold)
                         {
-                            // It's a tap
                             OnTap?.Invoke();
                             _playerController?.Jump();
                         }
@@ -120,7 +113,6 @@ namespace RunForHumanity.Systems
         {
             if (!_enableKeyboardInput) return;
             
-            // Lane movement
             if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
             {
                 OnSwipeLeft?.Invoke();
@@ -133,21 +125,18 @@ namespace RunForHumanity.Systems
                 _playerController?.MoveRight();
             }
             
-            // Jump
             if (Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.Space))
             {
                 OnSwipeUp?.Invoke();
                 _playerController?.Jump();
             }
             
-            // Slide
             if (Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow))
             {
                 OnSwipeDown?.Invoke();
                 _playerController?.Slide();
             }
             
-            // Dash
             if (Input.GetKeyDown(KeyCode.LeftShift) || Input.GetKeyDown(KeyCode.RightShift))
             {
                 _playerController?.Dash();
@@ -161,7 +150,6 @@ namespace RunForHumanity.Systems
             
             if (absX > absY)
             {
-                // Horizontal swipe
                 if (swipeDelta.x > 0)
                 {
                     OnSwipeRight?.Invoke();
@@ -175,7 +163,6 @@ namespace RunForHumanity.Systems
             }
             else
             {
-                // Vertical swipe
                 if (swipeDelta.y > 0)
                 {
                     OnSwipeUp?.Invoke();
@@ -203,7 +190,6 @@ namespace RunForHumanity.Systems
         
         private void HandleShake()
         {
-            // Shake triggers dash
             _playerController?.Dash();
         }
         

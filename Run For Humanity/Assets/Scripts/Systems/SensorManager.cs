@@ -4,25 +4,23 @@ using RunForHumanity.Core;
 
 namespace RunForHumanity.Systems
 {
-    /// <summary>
-    /// Sensor input manager for accelerometer and gyroscope
-    /// SOLID: Single Responsibility - Manages device sensors
-    /// Cumple con la rúbrica: Uso de 2 sensores (accelerometer + gyroscope)
-    /// </summary>
+    // Sensores del móvil - DESACTIVADO (solo swipes)
     public class SensorManager : MonoBehaviour, IInitializable, IUpdatable
     {
         [Header("Sensor Settings")]
-        [SerializeField] private bool _useAccelerometer = true;
-        [SerializeField] private bool _useGyroscope = true;
+        [SerializeField] private bool _useAccelerometer = false; // Desactivado
+        [SerializeField] private bool _useGyroscope = false; // Desactivado
         [SerializeField] private float _accelerometerSensitivity = 2f;
+        #pragma warning disable 0414
         [SerializeField] private float _gyroscopeSensitivity = 1f;
+        #pragma warning restore 0414
         
         [Header("Tilt Controls")]
-        [SerializeField] private bool _enableTiltToSteer = true;
+        [SerializeField] private bool _enableTiltToSteer = false; // Desactivado
         [SerializeField] private float _tiltThreshold = 15f; // degrees
         
         [Header("Shake Detection")]
-        [SerializeField] private bool _enableShakeDetection = true;
+        [SerializeField] private bool _enableShakeDetection = false; // Desactivado
         [SerializeField] private float _shakeThreshold = 2.5f;
         
         private Vector3 _lastAcceleration;
@@ -39,7 +37,6 @@ namespace RunForHumanity.Systems
         
         public void Initialize()
         {
-            // Enable gyroscope if available
             if (_useGyroscope && SystemInfo.supportsGyroscope)
             {
                 Input.gyro.enabled = true;
@@ -52,7 +49,6 @@ namespace RunForHumanity.Systems
                 Debug.LogWarning("[SensorManager] Gyroscope not supported on this device");
             }
             
-            // Check accelerometer support
             if (_useAccelerometer && SystemInfo.supportsAccelerometer)
             {
                 Debug.Log("[SensorManager] Accelerometer enabled");

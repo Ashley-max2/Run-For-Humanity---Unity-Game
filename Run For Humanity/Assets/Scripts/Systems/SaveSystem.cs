@@ -4,10 +4,6 @@ using RunForHumanity.Data;
 
 namespace RunForHumanity.Systems
 {
-    /// <summary>
-    /// Save/Load system for player data
-    /// SOLID: Single Responsibility - Data persistence
-    /// </summary>
     public class SaveSystem : MonoBehaviour
     {
         private const string SAVE_FILE_NAME = "playerdata.json";

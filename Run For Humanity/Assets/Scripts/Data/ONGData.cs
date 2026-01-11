@@ -50,15 +50,4 @@ namespace RunForHumanity.Data
             this.percentage = percentage;
         }
     }
-
-    [System.Serializable]
-    public class UserDonationPreferences
-    {
-        public string userId;
-        public List<ONGDistribution> distribucion = new List<ONGDistribution>();
-        public float totalAcumuladoMes;
-        public float totalAcumuladoHistorico;
-        public string proximaTransferenciaVal; // DateTime as string for JSON simplicity or stick to DateTime if using NewtonSoft
-        // public List<Certificado> certificados;
-    }
 }

@@ -41,14 +41,6 @@ public class GameSetup : MonoBehaviour
             particleObj.AddComponent<RunForHumanity.Systems.ParticleManager>();
         }
 
-        // Add UIManager
-        if (GetComponentInChildren<RunForHumanity.UI.UIManager>() == null)
-        {
-            var uiObj = new GameObject("UIManager");
-            uiObj.transform.SetParent(transform);
-            uiObj.AddComponent<RunForHumanity.UI.UIManager>();
-        }
-
         // Add InputManager
         if (GetComponentInChildren<RunForHumanity.Systems.InputManager>() == null)
         {
@@ -63,30 +55,6 @@ public class GameSetup : MonoBehaviour
             var sensorObj = new GameObject("SensorManager");
             sensorObj.transform.SetParent(transform);
             sensorObj.AddComponent<RunForHumanity.Systems.SensorManager>();
-        }
-
-        // Add DonationSystem
-        if (GetComponentInChildren<RunForHumanity.Systems.DonationSystem>() == null)
-        {
-            var donationObj = new GameObject("DonationSystem");
-            donationObj.transform.SetParent(transform);
-            donationObj.AddComponent<RunForHumanity.Systems.DonationSystem>();
-        }
-
-        // Add AdManager
-        if (GetComponentInChildren<RunForHumanity.Systems.AdManager>() == null)
-        {
-            var adObj = new GameObject("AdManager");
-            adObj.transform.SetParent(transform);
-            adObj.AddComponent<RunForHumanity.Systems.AdManager>();
-        }
-
-        // Add OrientationManager
-        if (GetComponentInChildren<RunForHumanity.Systems.OrientationManager>() == null)
-        {
-            var orientationObj = new GameObject("OrientationManager");
-            orientationObj.transform.SetParent(transform);
-            orientationObj.AddComponent<RunForHumanity.Systems.OrientationManager>();
         }
 
         Debug.Log("[GameSetup] All managers have been set up successfully!");

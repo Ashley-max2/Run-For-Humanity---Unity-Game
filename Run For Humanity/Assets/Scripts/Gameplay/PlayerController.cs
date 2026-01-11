@@ -2,6 +2,9 @@ using UnityEngine;
 using DG.Tweening;
 using RunForHumanity.Core.Events;
 using RunForHumanity.Core.Input;
+using RunForHumanity.Core;
+using RFH.Input;
+using UnityEngine.InputSystem;
 
 namespace RunForHumanity.Gameplay
 {
@@ -10,11 +13,11 @@ namespace RunForHumanity.Gameplay
     {
         [Header("Movement Settings")]
         public float forwardSpeed = 10f;
-        public float speedIncreaseRate = 0.1f; // Aumento de velocidad por segundo
+        public float speedIncreaseRate = 0.1f;
         public float maxSpeed = 30f;
-        public float laneChangeSpeed = 20f; // Velocidad del cambio de carril suave (aumentada para mayor respuesta)
-        public float jumpForce = 2f; // Fuerza de salto (1.5-2 recomendado)
-        public float gravity = -9.81f; // Gravedad realista
+        public float laneChangeSpeed = 20f;
+        public float jumpForce = 2f;
+        public float gravity = -9.81f;
         public float groundCheckDistance = 0.3f;
         public LayerMask groundLayer;
 
@@ -26,22 +29,26 @@ namespace RunForHumanity.Gameplay
         private float slideHeight = 1f;
 
         [Header("Lane Change Settings")]
-        public float laneChangeDuration = 0.15f; // Duración de la animación de cambio de carril (reducida para mayor respuesta)
+        public float laneChangeDuration = 0.15f;
+        #pragma warning disable 0414
         private bool isChangingLane = false;
+        #pragma warning restore 0414
 
         [Header("Particle Effects")]
         [SerializeField] private ParticleSystem runParticles;
         [SerializeField] private ParticleSystem jumpParticles;
         [SerializeField] private ParticleSystem slideParticles;
         [SerializeField] private GameObject deathParticlePrefab;
+        
+        [Header("Audio")]
+        [SerializeField] private AudioClip deathSound;
 
         [Header("Animation")]
         [SerializeField] private Animator animator;
 
         [Header("Lane Settings")]
-        private int currentLane = 0; // -1, 0, 1
+        private int currentLane = 0;
         
-        // Power-up states
         private bool hasShield = false;
         private float shieldTimer = 0f;
         private bool hasMagnet = false;
@@ -50,41 +57,53 @@ namespace RunForHumanity.Gameplay
         private float speedBoostAmount = 0f;
         private float speedBoostTimer = 0f;
         
-        // Public properties for external access
+        private float totalMeters = 0f;
+        private Vector3 lastPosition;
+        
+        private bool has500MetersVibrated = false;
+        private Coroutine vibrationCoroutine;
+        
         public float CurrentSpeed => forwardSpeed;
         public bool HasShield => hasShield;
         public bool HasMagnet => hasMagnet;
         public float MagnetRange => magnetRange;
 
-        // State
         private CharacterController controller;
         private Vector3 verticalVelocity;
         private bool isGrounded;
         private bool isDead = false;
+        
+        private PlayerInputActions playerInputActions;
+        private InputAction movementAction;
+        private InputAction jumpAction;
+        private InputAction slideAction;
+        
+        private SwipeDetector swipeDetector;
 
         void Start()
         {
             controller = GetComponent<CharacterController>();
             currentLane = LaneSystem.MIDDLE_LANE;
             
+            SetupSwipeDetector();
+            
             normalHeight = controller.height;
             slideHeight = normalHeight * 0.5f;
             
-            // Posicionar al player a la altura correcta
             if (transform.position.y < 1f)
             {
                 transform.position = new Vector3(
                     LaneSystem.GetXPosition(currentLane),
-                    1f, // Altura inicial sobre el suelo
+                    1f,
                     transform.position.z
                 );
             }
+            
+            lastPosition = transform.position;
 
-            // Subscribe to Events
-            EventManager.TriggerGameStart(); // Auto start for prototype
+            EventManager.TriggerGameStart();
             EventManager.OnPlayerHit += Die;
             
-            // Iniciar partículas de correr
             if (runParticles != null)
             {
                 runParticles.Play();
@@ -92,10 +111,34 @@ namespace RunForHumanity.Gameplay
             
             Debug.Log($"Player spawned at position: {transform.position}, CharacterController height: {controller.height}");
         }
+        
+        void SetupSwipeDetector()
+        {
+            swipeDetector = GetComponent<SwipeDetector>();
+            if (swipeDetector == null)
+            {
+                swipeDetector = gameObject.AddComponent<SwipeDetector>();
+            }
+            
+            swipeDetector.OnSwipeLeft += MoveLeft;
+            swipeDetector.OnSwipeRight += MoveRight;
+            swipeDetector.OnSwipeUp += Jump;
+            swipeDetector.OnSwipeDown += Slide;
+            
+            Debug.Log("[PlayerController] Swipe detector configurado");
+        }
 
         void OnDestroy()
         {
             EventManager.OnPlayerHit -= Die;
+            
+            if (swipeDetector != null)
+            {
+                swipeDetector.OnSwipeLeft -= MoveLeft;
+                swipeDetector.OnSwipeRight -= MoveRight;
+                swipeDetector.OnSwipeUp -= Jump;
+                swipeDetector.OnSwipeDown -= Slide;
+            }
         }
 
         void Update()
@@ -105,23 +148,67 @@ namespace RunForHumanity.Gameplay
             HandleSlideTimer();
             HandlePowerUpTimers();
             HandleSpeedIncrease();
+            
+            #if UNITY_EDITOR || UNITY_STANDALONE
             HandleInput();
+            #endif
+            
             MovePlayer();
             UpdateAnimations();
+            TrackMeters();
+        }
+        
+        void TrackMeters()
+        {
+            float distance = Vector3.Distance(new Vector3(transform.position.x, 0, transform.position.z), 
+                                             new Vector3(lastPosition.x, 0, lastPosition.z));
+            totalMeters += distance;
+            lastPosition = transform.position;
+            
+            if (totalMeters >= 500f && !has500MetersVibrated)
+            {
+                has500MetersVibrated = true;
+                if (vibrationCoroutine != null) StopCoroutine(vibrationCoroutine);
+                vibrationCoroutine = StartCoroutine(VibrateFor500Meters());
+            }
+            
+            if (UI.GameplayUIController.Instance != null)
+            {
+                UI.GameplayUIController.Instance.SetMeters(totalMeters);
+            }
+        }
+        
+        // Vibra 3s al llegar a 500m
+        private System.Collections.IEnumerator VibrateFor500Meters()
+        {
+            Debug.Log("[PlayerController] ¡500 metros alcanzados! Vibrando durante 3 segundos");
+            
+            float elapsedTime = 0f;
+            while (elapsedTime < 3f)
+            {
+                #if UNITY_ANDROID || UNITY_IOS
+                Handheld.Vibrate();
+                #endif
+                
+                yield return new WaitForSeconds(0.5f);
+                elapsedTime += 0.5f;
+            }
+            
+            Debug.Log("[PlayerController] Vibración de 500 metros completada");
         }
 
         void UpdateAnimations()
         {
             if (animator == null) return;
             
-            // Actualizar parámetros del Animator
             animator.SetBool("isGrounded", isGrounded);
             animator.SetBool("isSliding", isSliding);
+            animator.SetBool("isJumping", !isGrounded);
+            animator.SetBool("isRunning", !isDead && isGrounded && !isSliding);
         }
 
         void HandleSpeedIncrease()
         {
-            // Aumentar velocidad automáticamente como Subway Surfers
             if (forwardSpeed < maxSpeed)
             {
                 forwardSpeed += speedIncreaseRate * Time.deltaTime;
@@ -143,7 +230,6 @@ namespace RunForHumanity.Gameplay
 
         void HandlePowerUpTimers()
         {
-            // Shield timer
             if (hasShield)
             {
                 shieldTimer -= Time.deltaTime;
@@ -154,7 +240,6 @@ namespace RunForHumanity.Gameplay
                 }
             }
             
-            // Magnet timer
             if (hasMagnet)
             {
                 magnetTimer -= Time.deltaTime;
@@ -165,7 +250,6 @@ namespace RunForHumanity.Gameplay
                 }
             }
             
-            // Speed boost timer
             if (speedBoostTimer > 0f)
             {
                 speedBoostTimer -= Time.deltaTime;
@@ -180,7 +264,6 @@ namespace RunForHumanity.Gameplay
 
         void HandleInput()
         {
-            // Keyboard input directo para testing
             if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
             {
                 MoveLeft();
@@ -204,24 +287,20 @@ namespace RunForHumanity.Gameplay
 
         void MovePlayer()
         {
-            // Forward speed constante (Subway Surfers style)
             Vector3 forwardMove = transform.forward * forwardSpeed * Time.deltaTime;
 
-            // Ground check mejorado
             isGrounded = CheckGrounded();
             
             if (isGrounded && verticalVelocity.y < 0)
             {
-                verticalVelocity.y = -2f; // Pequeña fuerza para mantenerlo pegado al suelo
+                verticalVelocity.y = -2f;
             }
             
-            // Aplicar gravedad
             if (!isGrounded)
             {
                 verticalVelocity.y += gravity * Time.deltaTime;
             }
 
-            // Movimiento lateral: cambio suave de carril con interpolación
             float targetX = LaneSystem.GetXPosition(currentLane);
             Vector3 targetPos = new Vector3(targetX, transform.position.y, transform.position.z);
             
@@ -239,23 +318,19 @@ namespace RunForHumanity.Gameplay
                 }
             }
 
-            // COMBINE: forward + lateral + vertical
             controller.Move(forwardMove + lateralMove + verticalVelocity * Time.deltaTime);
         }
 
         bool CheckGrounded()
         {
-            // Multiple ground checks para mayor fiabilidad
             if (controller.isGrounded) return true;
 
-            // Raycast desde el centro
             Vector3 rayOrigin = transform.position + Vector3.up * 0.1f;
             if (Physics.Raycast(rayOrigin, Vector3.down, groundCheckDistance, groundLayer))
             {
                 return true;
             }
 
-            // Raycast desde los lados del CharacterController
             float radius = controller.radius;
             Vector3[] offsets = new Vector3[]
             {
@@ -280,20 +355,16 @@ namespace RunForHumanity.Gameplay
         {
             int newLane = currentLane + direction;
             
-            // Clamp to valid lanes
             newLane = Mathf.Clamp(newLane, LaneSystem.LEFT_LANE, LaneSystem.RIGHT_LANE);
             
             if (newLane != currentLane)
             {
                 currentLane = newLane;
                 
-                // Cancelar animación anterior si existe para respuesta instantánea
                 transform.DOKill();
                 isChangingLane = true;
                 
-                // Animación de inclinación al cambiar de carril (Subway Surfers style)
-                // Duración más corta para respuesta más rápida
-                float tiltAngle = direction * 15f; // Inclinación hacia el lado del movimiento
+                float tiltAngle = direction * 15f;
                 transform.DORotate(new Vector3(0, 0, tiltAngle), laneChangeDuration * 0.3f)
                     .OnComplete(() => {
                         transform.DORotate(Vector3.zero, laneChangeDuration * 0.3f)
@@ -306,32 +377,27 @@ namespace RunForHumanity.Gameplay
 
         public void Jump()
         {
-            // Permitir saltar siempre - cancela slide inmediatamente si está activo
             if (isSliding)
             {
                 EndSlide();
             }
             
-            // Saltos normales: solo si está en el suelo
             if (isGrounded)
             {
                 verticalVelocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
                 EventManager.TriggerPlayerJump();
                 
-                // Activar animación de salto
                 if (animator != null)
                 {
                     animator.SetTrigger("Jump");
                 }
                 
-                // Animación de salto estilo Subway Surfers (squash and stretch)
                 transform.DOScaleY(1.2f, 0.1f).OnComplete(() => {
                     transform.DOScaleY(0.8f, 0.2f).OnComplete(() => {
                         transform.DOScaleY(1f, 0.1f);
                     });
                 });
                 
-                // Partículas de salto
                 if (jumpParticles != null)
                 {
                     jumpParticles.Play();
@@ -343,13 +409,12 @@ namespace RunForHumanity.Gameplay
 
         public void Die()
         {
-            if (isDead) return; // Ya está muerto
+            if (isDead) return;
             
-            // Si tiene escudo, no muere
             if (hasShield)
             {
                 Debug.Log("[Player] ¡Salvado por el escudo!");
-                hasShield = false; // Consumir escudo
+                hasShield = false;
                 shieldTimer = 0f;
                 return;
             }
@@ -357,30 +422,88 @@ namespace RunForHumanity.Gameplay
             isDead = true;
             Debug.Log("[Player] ¡Jugador MUERE!");
             
-            // Activar animación de muerte
+            StartCoroutine(FlashOnDeath());
+            
             if (animator != null)
             {
-                animator.SetTrigger("Die");
+                animator.SetBool("isDead", true);
             }
             
-            // Detener partículas de movimiento
             if (runParticles != null) runParticles.Stop();
             if (slideParticles != null) slideParticles.Stop();
             
-            // Crear partículas de muerte
             if (deathParticlePrefab != null)
             {
                 GameObject particles = Instantiate(deathParticlePrefab, transform.position, Quaternion.identity);
                 Destroy(particles, 3f);
             }
             
+            if (deathSound != null)
+            {
+                float sfxVolume = GameSettingsManager.Instance.GetNormalizedSFXVolume();
+                AudioSource.PlayClipAtPoint(deathSound, transform.position, sfxVolume);
+            }
+            
             EventManager.TriggerGameOver();
             
-            // Animación de muerte
             transform.DOShakeScale(1f, 1f);
         }
         
-        // Public methods for InputManager
+        // SENSOR: Flash de cámara 1s al morir
+        private System.Collections.IEnumerator FlashOnDeath()
+        {
+            Debug.Log("[PlayerController] Activando flash de cámara por muerte");
+            
+            #if UNITY_ANDROID
+            AndroidJavaClass cameraClass = new AndroidJavaClass("android.hardware.Camera");
+            AndroidJavaObject camera = null;
+            AndroidJavaObject parameters = null;
+            bool flashActivated = false;
+            
+            try
+            {
+                camera = cameraClass.CallStatic<AndroidJavaObject>("open");
+                parameters = camera.Call<AndroidJavaObject>("getParameters");
+                
+                parameters.Call("setFlashMode", "torch");
+                camera.Call("setParameters", parameters);
+                camera.Call("startPreview");
+                
+                flashActivated = true;
+                Debug.Log("[PlayerController] Flash activado");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogWarning($"[PlayerController] No se pudo activar el flash: {e.Message}");
+            }
+            
+            yield return new WaitForSeconds(1f);
+            
+            if (flashActivated && camera != null)
+            {
+                try
+                {
+                    parameters.Call("setFlashMode", "off");
+                    camera.Call("setParameters", parameters);
+                    camera.Call("stopPreview");
+                    camera.Call("release");
+                    Debug.Log("[PlayerController] Flash desactivado");
+                }
+                catch (System.Exception e)
+                {
+                    Debug.LogWarning($"[PlayerController] Error al apagar flash: {e.Message}");
+                    try { camera.Call("release"); } catch { }
+                }
+            }
+            #elif UNITY_IOS
+            Debug.Log("[PlayerController] iOS: Simulando flash con pantalla blanca");
+            yield return new WaitForSeconds(1f);
+            #else
+            Debug.Log("[PlayerController] Flash no disponible en esta plataforma");
+            yield return new WaitForSeconds(1f);
+            #endif
+        }
+        
         public void MoveLeft()
         {
             if (currentLane > LaneSystem.LEFT_LANE)
@@ -395,13 +518,11 @@ namespace RunForHumanity.Gameplay
         
         public void Slide()
         {
-            // Permitir slide en cualquier momento - cancela salto si está en el aire
             if (!isSliding)
             {
-                // Si está saltando, forzar caída rápida al suelo
                 if (!isGrounded)
                 {
-                    verticalVelocity.y = -20f; // Caída rápida para transición inmediata
+                    verticalVelocity.y = -20f;
                 }
                 StartSlide();
             }
@@ -412,15 +533,17 @@ namespace RunForHumanity.Gameplay
             isSliding = true;
             slideTimer = slideDuration;
             
-            // Reducir altura del CharacterController (sin cambiar center)
             controller.height = slideHeight;
             controller.center = new Vector3(0, 0, 0);
             
-            // Animación visual estilo Subway Surfers (aplastarse hacia abajo)
             transform.DOScaleY(0.4f, 0.15f);
-            transform.DOScaleZ(1.3f, 0.15f); // Alargar en Z para efecto de velocidad
+            transform.DOScaleZ(1.3f, 0.15f);
             
-            // Partículas de deslizamiento
+            if (animator != null)
+            {
+                animator.SetTrigger("Slide");
+            }
+            
             if (slideParticles != null)
             {
                 slideParticles.Play();
@@ -433,15 +556,12 @@ namespace RunForHumanity.Gameplay
         {
             isSliding = false;
             
-            // Restaurar altura del CharacterController (sin cambiar center)
             controller.height = normalHeight;
             controller.center = new Vector3(0, 0, 0);
             
-            // Restaurar escala visual
             transform.DOScaleY(1f, 0.15f);
             transform.DOScaleZ(1f, 0.15f);
             
-            // Detener partículas de deslizamiento
             if (slideParticles != null)
             {
                 slideParticles.Stop();
@@ -452,7 +572,6 @@ namespace RunForHumanity.Gameplay
         
         public void Dash()
         {
-            // TODO: Implement dash mechanic
             Debug.Log("Dash triggered");
         }
         
@@ -461,19 +580,15 @@ namespace RunForHumanity.Gameplay
             forwardSpeed += amount;
         }
         
-        // ===== POWER-UP METHODS =====
-        
         public void ApplySpeedBoost(float boostAmount, float duration)
         {
             Debug.Log($"[Player] Speed boost applied: +{boostAmount} for {duration}s");
             
-            // Si ya hay boost activo, quitarlo primero
             if (speedBoostTimer > 0f)
             {
                 forwardSpeed -= speedBoostAmount;
             }
             
-            // Aplicar nuevo boost
             speedBoostAmount = boostAmount;
             speedBoostTimer = duration;
             forwardSpeed += boostAmount;
@@ -486,8 +601,6 @@ namespace RunForHumanity.Gameplay
             Debug.Log($"[Player] Shield applied for {duration}s");
             hasShield = true;
             shieldTimer = duration;
-            
-            // TODO: Activar efecto visual del escudo (material, partículas, etc.)
         }
         
         public void ApplyMagnet(float duration, float range)
@@ -496,8 +609,6 @@ namespace RunForHumanity.Gameplay
             hasMagnet = true;
             magnetTimer = duration;
             magnetRange = range;
-            
-            // TODO: Activar efecto visual del imán
         }
     }
 }

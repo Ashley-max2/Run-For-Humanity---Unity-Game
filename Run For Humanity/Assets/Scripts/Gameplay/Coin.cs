@@ -1,5 +1,6 @@
 using UnityEngine;
 using RunForHumanity.Data;
+using RunForHumanity.Core;
 
 namespace RunForHumanity.Gameplay
 {
@@ -76,8 +77,18 @@ namespace RunForHumanity.Gameplay
         {
             isCollected = true;
             
-            // Añadir monedas al sistema de guardado
-            CoinDataManager.AddCoins(coinValue);
+            // Aplicar multiplicador de la tienda
+            int multiplier = Data.ShopDataManager.GetCoinMultiplierLevel();
+            int coinsToAdd = coinValue * multiplier;
+            
+            // Añadir monedas al sistema de guardado GLOBAL (con multiplicador)
+            CoinDataManager.AddCoins(coinsToAdd);
+            
+            // Añadir monedas al UI del GAMEPLAY (monedas de esta partida con multiplicador)
+            if (UI.GameplayUIController.Instance != null)
+            {
+                UI.GameplayUIController.Instance.AddCoins(coinsToAdd);
+            }
             
             // Crear partículas si hay prefab asignado
             if (collectParticlePrefab != null)
@@ -89,7 +100,8 @@ namespace RunForHumanity.Gameplay
             // Reproducir sonido si hay clip asignado
             if (collectSound != null)
             {
-                AudioSource.PlayClipAtPoint(collectSound, transform.position);
+                float sfxVolume = GameSettingsManager.Instance.GetNormalizedSFXVolume();
+                AudioSource.PlayClipAtPoint(collectSound, transform.position, sfxVolume);
             }
             
             // Notificar al contador de monedas en la UI

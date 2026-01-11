@@ -4,9 +4,7 @@ using RunForHumanity.Data;
 
 namespace RunForHumanity.Gameplay
 {
-    /// <summary>
-    /// Contador de monedas en la UI que se actualiza automáticamente
-    /// </summary>
+    // Contador de monedas en UI con animación
     public class CoinUICounter : MonoBehaviour
     {
         [Header("Referencias UI")]
@@ -28,22 +26,18 @@ namespace RunForHumanity.Gameplay
 
         private void Start()
         {
-            // Cargar datos al inicio
             CoinDataManager.LoadData();
             
-            // Si no hay referencia, buscar en este GameObject
             if (coinText == null)
             {
                 coinText = GetComponent<TextMeshProUGUI>();
             }
             
-            // Actualizar display inicial
             UpdateDisplay();
         }
 
         private void Update()
         {
-            // Animar el cambio de valor
             if (animateOnChange && animationTimer < animationDuration)
             {
                 animationTimer += Time.deltaTime;

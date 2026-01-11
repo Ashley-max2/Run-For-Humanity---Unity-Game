@@ -122,55 +122,41 @@ namespace RunForHumanity.Gameplay
                 return null;
             }
 
-            // Si estamos en la zona segura, solo usar tracks fáciles
+            // Si estamos en la zona segura, solo usar tracks fáciles (elemento 0)
             if (segmentCount < safeSegments)
             {
-                return trackPrefabs[0]; // Easy
+                lastTrackIndex = 0;
+                return trackPrefabs[0];
             }
 
-            // Seleccionar prefab basado en dificultad
+            // Justo después de la zona segura, empezar siempre por el elemento 0
+            if (segmentCount == safeSegments)
+            {
+                lastTrackIndex = 0;
+                return trackPrefabs[0];
+            }
+
+            // Después, todos los tracks tienen igual probabilidad
             int index = GetTrackPrefabIndex();
             return trackPrefabs[index];
         }
 
         int GetTrackPrefabIndex()
         {
-            // Asumiendo 4 prefabs: Easy, Medium, Hard, Extreme
-            if (trackPrefabs.Length != 4)
+            // Todos los tracks tienen el mismo ratio de aparición (equiprobable)
+            if (trackPrefabs.Length == 0)
             {
-                Debug.LogWarning($"[TrackGenerator] Expected 4 track prefabs, got {trackPrefabs.Length}");
-                return Random.Range(0, trackPrefabs.Length);
+                Debug.LogError("[TrackGenerator] No track prefabs assigned!");
+                return 0;
             }
 
-            // Distribución basada en dificultad con variación aleatoria
-            float rand = Random.value;
-            int newIndex;
+            // Selección aleatoria con probabilidad igual para todos
+            int newIndex = Random.Range(0, trackPrefabs.Length);
             
-            if (difficultyProgress < 0.25f)
+            // Evitar repetir el mismo track consecutivamente
+            if (newIndex == lastTrackIndex && trackPrefabs.Length > 1)
             {
-                // Dificultad baja: mayormente Easy/Medium
-                newIndex = rand < 0.7f ? 0 : 1; // 70% Easy, 30% Medium
-            }
-            else if (difficultyProgress < 0.5f)
-            {
-                // Dificultad media: Medium/Hard
-                newIndex = rand < 0.6f ? 1 : 2; // 60% Medium, 40% Hard
-            }
-            else if (difficultyProgress < 0.75f)
-            {
-                // Dificultad alta: Hard con algo de Extreme
-                newIndex = rand < 0.7f ? 2 : 3; // 70% Hard, 30% Extreme
-            }
-            else
-            {
-                // Dificultad extrema: mayormente Extreme
-                newIndex = rand < 0.8f ? 3 : 2; // 80% Extreme, 20% Hard
-            }
-            
-            // Evitar 2 extremos (índice 3) consecutivos
-            if (newIndex == 3 && lastTrackIndex == 3)
-            {
-                newIndex = 2; // Cambiar a Hard
+                newIndex = (newIndex + 1) % trackPrefabs.Length;
             }
             
             lastTrackIndex = newIndex;

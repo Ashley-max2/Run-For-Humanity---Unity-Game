@@ -4,11 +4,6 @@ using System.Collections.Generic;
 
 namespace RunForHumanity.Core
 {
-    /// <summary>
-    /// Main game manager coordinating all systems
-    /// SOLID: Single Responsibility - Coordinates systems, doesn't implement them
-    /// SOLID: Dependency Inversion - Depends on abstractions (IInitializable)
-    /// </summary>
     public class GameManager : MonoBehaviour
     {
         public static GameManager Instance { get; private set; }

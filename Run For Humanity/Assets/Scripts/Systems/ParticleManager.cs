@@ -4,10 +4,6 @@ using RunForHumanity.Core;
 
 namespace RunForHumanity.Systems
 {
-    /// <summary>
-    /// Particle effects management system
-    /// SOLID: Single Responsibility - Manages all particle effects
-    /// </summary>
     public class ParticleManager : MonoBehaviour, IInitializable
     {
         [System.Serializable]
@@ -32,7 +28,6 @@ namespace RunForHumanity.Systems
         
         public void Initialize()
         {
-            // Build effect dictionary
             foreach (var effect in _effects)
             {
                 if (!_effectDict.ContainsKey(effect.name))
@@ -40,7 +35,6 @@ namespace RunForHumanity.Systems
                     _effectDict.Add(effect.name, effect);
                     _particlePools[effect.name] = new Queue<ParticleSystem>();
                     
-                    // Pre-instantiate pool
                     for (int i = 0; i < _poolSize; i++)
                     {
                         CreatePooledParticle(effect);
@@ -130,7 +124,7 @@ namespace RunForHumanity.Systems
                 }
                 else
                 {
-                    // Create new if pool is empty
+
                     return CreatePooledParticle(_effectDict[effectName]);
                 }
             }

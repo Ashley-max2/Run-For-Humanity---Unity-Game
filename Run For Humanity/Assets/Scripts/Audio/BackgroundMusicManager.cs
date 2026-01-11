@@ -2,11 +2,7 @@ using UnityEngine;
 
 namespace RunForHumanity.Audio
 {
-    /// <summary>
-    /// Gestiona la música de fondo que persiste entre escenas.
-    /// Este GameObject no se destruirá al cambiar de escena (DontDestroyOnLoad).
-    /// Solo debe haber una instancia en toda la aplicación (Singleton).
-    /// </summary>
+    // Música de fondo persistente entre escenas (Singleton)
     [RequireComponent(typeof(AudioSource))]
     public class BackgroundMusicManager : MonoBehaviour
     {
@@ -29,7 +25,6 @@ namespace RunForHumanity.Audio
         
         private void Awake()
         {
-            // Implementar Singleton - solo una instancia de música
             if (instance != null && instance != this)
             {
                 Debug.Log("[BackgroundMusic] Ya existe una instancia, destruyendo duplicado");
@@ -41,7 +36,6 @@ namespace RunForHumanity.Audio
             DontDestroyOnLoad(gameObject);
             Debug.Log("[BackgroundMusic] ✓ Instancia creada y marcada como persistente");
             
-            // Configurar AudioSource
             audioSource = GetComponent<AudioSource>();
             
             if (audioSource == null)
@@ -70,9 +64,6 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Reproduce la música con fade in opcional
-        /// </summary>
         public void PlayMusic()
         {
             if (audioSource == null)
@@ -109,9 +100,6 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Pausa la música con fade out opcional
-        /// </summary>
         public void PauseMusic()
         {
             if (audioSource == null || !audioSource.isPlaying) return;
@@ -126,9 +114,6 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Detiene la música con fade out opcional
-        /// </summary>
         public void StopMusic()
         {
             if (audioSource == null) return;
@@ -143,9 +128,6 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Cambia el volumen de la música
-        /// </summary>
         public void SetVolume(float newVolume)
         {
             volume = Mathf.Clamp01(newVolume);
@@ -156,16 +138,12 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Cambia la canción de fondo
-        /// </summary>
         public void ChangeMusic(AudioClip newClip, bool fadeTransition = true)
         {
             if (newClip == null) return;
             
             if (fadeTransition && audioSource.isPlaying)
             {
-                // Fade out, cambiar clip, fade in
                 StartCoroutine(ChangeWithFade(newClip));
             }
             else
@@ -177,9 +155,6 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Activa o desactiva el silencio (mute)
-        /// </summary>
         public void SetMute(bool mute)
         {
             if (audioSource != null)
@@ -188,18 +163,12 @@ namespace RunForHumanity.Audio
             }
         }
         
-        /// <summary>
-        /// Aumenta el volumen gradualmente
-        /// </summary>
         private void FadeIn()
         {
             if (isFading) StopAllCoroutines();
             StartCoroutine(FadeCoroutine(targetVolume, fadeInDuration));
         }
         
-        /// <summary>
-        /// Disminuye el volumen gradualmente
-        /// </summary>
         private void FadeOut(bool pauseAfter)
         {
             if (isFading) StopAllCoroutines();
@@ -230,20 +199,16 @@ namespace RunForHumanity.Audio
         
         private System.Collections.IEnumerator ChangeWithFade(AudioClip newClip)
         {
-            // Fade out
             yield return FadeCoroutine(0f, fadeOutDuration);
             
-            // Cambiar clip
             audioSource.Stop();
             audioSource.clip = newClip;
             backgroundMusic = newClip;
             
-            // Fade in
             audioSource.Play();
             yield return FadeCoroutine(targetVolume, fadeInDuration);
         }
         
-        // Métodos públicos para acceso desde otros scripts
         public static BackgroundMusicManager Instance => instance;
         public bool IsPlaying => audioSource != null && audioSource.isPlaying;
         public float CurrentVolume => audioSource != null ? audioSource.volume : 0f;

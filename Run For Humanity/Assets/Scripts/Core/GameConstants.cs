@@ -22,11 +22,6 @@ namespace RunForHumanity.Core
         public const int CHUNKS_AHEAD = 3;
         public const float DESPAWN_DISTANCE = 30f;
         
-        // Monetization
-        public const float DONATION_PERCENTAGE = 0.8f; // 80% to ONGs
-        public const float SUBSCRIPTION_PRICE = 2.99f;
-        public const float SUBSCRIPTION_BONUS = 0.1f; // 10% extra impact
-        
         // UI
         public const float UI_ANIMATION_DURATION = 0.3f;
         public const float NOTIFICATION_DISPLAY_TIME = 3f;

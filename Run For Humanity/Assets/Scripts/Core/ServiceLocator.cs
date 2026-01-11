@@ -3,10 +3,7 @@ using System.Collections.Generic;
 
 namespace RunForHumanity.Core
 {
-    /// <summary>
-    /// Service Locator pattern for dependency injection
-    /// SOLID: Dependency Inversion Principle
-    /// </summary>
+    // Service Locator para dependency injection
     public static class ServiceLocator
     {
         private static readonly Dictionary<Type, object> _services = new Dictionary<Type, object>();

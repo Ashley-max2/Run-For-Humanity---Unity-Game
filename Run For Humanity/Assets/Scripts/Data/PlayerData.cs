@@ -33,12 +33,6 @@ namespace RunForHumanity.Data
         public bool vibrationsEnabled = true;
         public bool notificationsEnabled = true;
         
-        // Donation Preferences
-        public List<ONGDistribution> ongDistribution = new List<ONGDistribution>();
-        public float pendingDonationAmount;
-        public DateTime nextDonationDate;
-        public List<DonationCertificate> certificates = new List<DonationCertificate>();
-        
         // Social
         public List<string> friendIds = new List<string>();
         public string currentGroupId;
@@ -51,29 +45,6 @@ namespace RunForHumanity.Data
             level = 1;
             accountCreated = DateTime.Now;
             lastPlayed = DateTime.Now;
-            
-            // Default ONG distribution (equal 3 ONGs)
-            ongDistribution.Add(new ONGDistribution("water_org", 33.33f));
-            ongDistribution.Add(new ONGDistribution("education_fund", 33.33f));
-            ongDistribution.Add(new ONGDistribution("health_world", 33.34f));
-        }
-    }
-    
-    [Serializable]
-    public class DonationCertificate
-    {
-        public string certificateId;
-        public DateTime date;
-        public float amount;
-        public Dictionary<string, float> ongBreakdown;
-        public string impactDescription;
-        
-        public DonationCertificate(float amount, Dictionary<string, float> breakdown)
-        {
-            certificateId = System.Guid.NewGuid().ToString();
-            date = DateTime.Now;
-            this.amount = amount;
-            this.ongBreakdown = breakdown;
         }
     }
 }
